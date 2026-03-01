@@ -1,18 +1,18 @@
-package com.psb.summerwiki_api.post.dto;
+package com.psb.summerwiki_api.note.dto;
 
 import java.time.LocalDateTime;
 
-import com.psb.summerwiki_api.post.entity.PostHistory;
+import com.psb.summerwiki_api.note.entity.NoteHistory;
 
 import lombok.Getter;
 
 @Getter
-public class PostHistoryResponse {
+public class NoteHistoryResponse {
     private final Long historyId;
     private final String title;
     private final LocalDateTime modifiedDate;
 
-    public PostHistoryResponse(PostHistory history) {
+    public NoteHistoryResponse(NoteHistory history) {
         this.historyId = history.getId();
         this.title = history.getTitle();
         this.modifiedDate = history.getCreatedDate(); // 생성일이 곧 수정 시점
