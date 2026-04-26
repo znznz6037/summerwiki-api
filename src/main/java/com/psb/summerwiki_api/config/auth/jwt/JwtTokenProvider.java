@@ -15,17 +15,8 @@ import javax.crypto.SecretKey;
 @Component
 public class JwtTokenProvider {
 
-    // @Value("${jwt.secret}")
-    // private String secretKey;
-
     private final Key key;
     private final long tokenValidityInMilliseconds = 1000L * 60; // 30분 유지
-
-    // @PostConstruct
-    // protected void init() {
-    //     byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
-    //     this.key = Keys.hmacShaKeyFor(keyBytes);
-    // }
 
     public JwtTokenProvider(@Value("${jwt.secret}") String secretKey) {
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
