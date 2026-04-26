@@ -1,6 +1,5 @@
 package com.psb.summerwiki_api.config.auth.handler;
 
-<<<<<<< HEAD
 import com.psb.summerwiki_api.config.auth.entity.RefreshToken;
 import com.psb.summerwiki_api.config.auth.jwt.JwtTokenProvider;
 import com.psb.summerwiki_api.config.auth.repository.RefreshTokenRepository;
@@ -10,12 +9,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseCookie;
-=======
-import com.psb.summerwiki_api.config.auth.jwt.JwtTokenProvider;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
->>>>>>> origin/main
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -29,37 +22,28 @@ import java.io.IOException;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenProvider tokenProvider;
-<<<<<<< HEAD
     private final RefreshTokenRepository refreshTokenRepository;
-=======
->>>>>>> origin/main
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         String email = (String) oAuth2User.getAttributes().get("email");
         
-<<<<<<< HEAD
-        String token = tokenProvider.createAccessToken(email, "ROLE_USER");
         String refreshToken = tokenProvider.createRefreshToken(email, "ROLE_USER");
-
         refreshTokenRepository.save(new RefreshToken(email, refreshToken));
 
         //RefreshToken을 HttpOnly 쿠키로 설정
         addRefreshTokenCookie(response, refreshToken);
 
         //AccessToken만 쿼리 파라미터로 전달
-=======
-        String token = tokenProvider.createToken(email, "ROLE_USER");
->>>>>>> origin/main
+        String accessToken = tokenProvider.createAccessToken(email, "ROLE_USER");
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/oauth2/redirect")
-                .queryParam("token", token)
+                .queryParam("token", accessToken)
                 .build().toUriString();
         //String targetUrl = "운영URL/oauth2/redirect?token=" + token;
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
-<<<<<<< HEAD
 
     private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
         // 쿠키 설정 (예: HttpOnly, Secure 등)
@@ -73,6 +57,4 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         
         response.addHeader("Set-Cookie", cookie.toString());
     }
-=======
->>>>>>> origin/main
 }
