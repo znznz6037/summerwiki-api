@@ -2,7 +2,6 @@ package com.psb.summerwiki_api.config;
 
 import java.util.Arrays;
 
-import org.apache.tomcat.util.file.ConfigurationSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +17,7 @@ import com.psb.summerwiki_api.config.auth.jwt.JwtAuthenticationFilter;
 import com.psb.summerwiki_api.config.auth.service.CustomOAuth2UserService;
 import com.psb.summerwiki_api.user.Role;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -30,27 +30,26 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, OAuth2SuccessHandler oAuth2SuccessHandler, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
-            // 1. CSRF 비활성화 및 CORS 설정 적용
-            .csrf(csrf -> csrf.disable()) // 초기 개발 시 CSRF 비활성화
+            .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfiguration()))
-            
-            // 세션을 사용하지 않도록 설정 (JWT 기반 인증이므로)
             .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-
-            // 2. URL별 권한 관리
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    // 인증 실패 시 401 Unauthorized 응답해서 React에서 토큰 만료로 인식하도록 처리
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + authException.getMessage() + "\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/oauth2/**", "/", "/css/**", "/images/**", "/js/**", "/h2-console/**").permitAll() // 정적 리소스 허용
-                .requestMatchers("/api/**").hasRole(Role.USER.name()) // API는 유저 권한 필요
-                .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
+                .requestMatchers("/", "/login", "/api/auth/refresh", "/api/auth/logout", "/oauth2/**", "/", "/css/**", "/images/**", "/js/**", "/h2-console/**", "/assets/**").permitAll() // 정적 리소스 허용
+                .requestMatchers("/api/**").hasRole(Role.USER.name())
+                .anyRequest().authenticated()
             )
-
-            // 3. 로그아웃 설정
             .logout(logout -> logout
-                .logoutSuccessUrl("/") // 로그아웃 성공 시 홈으로
+                .logoutSuccessUrl("/")
             )
-
-            // 4. OAuth2 로그인 설정
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
@@ -61,19 +60,17 @@ public class SecurityConfig {
         return http.build();
     }
 
-    //WebConfig에서 CORS 설정을 했지만, Spring Security에서도 CORS 설정이 필요
     @Bean
     public CorsConfigurationSource corsConfiguration() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // 리액트 도메인 허용
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // 모든 HTTP 메서드 허용
-        configuration.setAllowedHeaders(Arrays.asList("*")); // 모든 헤더 허용
-        configuration.setAllowCredentials(true); // 쿠키, 세션 허용
-        //configuration.setExposedHeaders(Arrays.asList("Authorization")); // 브라우저가 읽을 수 있도록 헤더 노출
-        //configuration.setMaxAge(3600L); // 1시간 동안 캐싱
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173")); // 배포 시 운영 URL 추가 필요
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); //Preflight 요청 캐싱 시간
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 대해 CORS 설정
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }

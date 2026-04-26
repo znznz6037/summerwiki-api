@@ -25,7 +25,6 @@ public class OAuthAttributes {
         this.picture = picture;
     }
 
-    // 구글 서비스인지 확인하고 데이터 매핑
     public static OAuthAttributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         return ofGoogle(userNameAttributeName, attributes);
     }
@@ -40,13 +39,12 @@ public class OAuthAttributes {
                 .build();
     }
 
-    // 처음 가입 시 User 엔티티 생성
     public User toEntity() {
         return User.builder()
                 .name(name)
                 .email(email)
                 .picture(picture)
-                .role(Role.USER) // 기본 권한을 USER로 설정
+                .role(Role.USER)
                 .build();
     }
 }

@@ -1,23 +1,42 @@
 package com.psb.summerwiki_api.global.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
+
+import java.io.IOException;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    // 1. 기존 CORS 설정 유지 (개발 환경 및 로컬 테스트용)
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        // TODO Auto-generated method stub
-        registry.addMapping("/api/**") // 모든 API 경로에 대해 CORS 설정
-                .allowedOrigins("http://localhost:5173") // 리액트 도메인 허용
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS") // 모든 HTTP 메서드 허용
-                .allowedHeaders("*") // 모든 헤더 허용
-                .allowCredentials(true) // 쿠키, 세션 허용
-                .maxAge(3600); // 1시간 동안 캐싱
-        
+        registry.addMapping("/api/**")
+                .allowedOrigins("http://localhost:5173") // 배포 시 운영 URL 추가 필요
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
     }
-    
-    
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/")
+                .resourceChain(true)
+                .addResolver(new PathResourceResolver() {
+                    @Override
+                    protected Resource getResource(String resourcePath, Resource location) throws IOException {
+                        Resource requestedResource = location.createRelative(resourcePath);
+                        return (requestedResource.exists() && requestedResource.isReadable()) 
+                                ? requestedResource 
+                                : new ClassPathResource("/static/index.html");
+                    }
+                });
+    }
 }

@@ -5,13 +5,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.psb.summerwiki_api.global.common.ApiResponse;
 import com.psb.summerwiki_api.user.dto.UserResponse;
-import com.psb.summerwiki_api.user.entity.User;
-import com.psb.summerwiki_api.user.repository.UserRepository;
 import com.psb.summerwiki_api.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
-
-import java.util.Optional;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;

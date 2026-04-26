@@ -5,11 +5,15 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import io.jsonwebtoken.ExpiredJwtException;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -17,6 +21,7 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Component
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
@@ -24,26 +29,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-
-        // 1. 헤더에서 토큰 추출 (Bearer ...)
+        
+        // 토큰 추출
         String token = resolveToken(request);
 
-        System.out.println("DEBUG: Incoming Request URL: " + request.getRequestURI());
-        System.out.println("DEBUG: Extracted Token: " + token);
+        log.debug("DEBUG: Request URL: " + request.getRequestURI());
+        log.debug("DEBUG: Extracted Token: " + token);
 
-        // 2. 토큰 유효성 검사
-        if (token != null && tokenProvider.validateToken(token)) {
-            String email = tokenProvider.getEmail(token);
-            String role = tokenProvider.getRole(token);
+        // 토큰 유효성 검사
+        try {
+            if (token != null && tokenProvider.validateToken(token)) {
+                String email = tokenProvider.getEmail(token);
+                String role = tokenProvider.getRole(token);
 
-            //ROLE_USER 권한 부여
-            List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
-            
-            // 3. 인증 객체 생성 및 컨텍스트에 저장
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(email, null, authorities);
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            System.out.println("====== [AUTH SUCCESS]: " + email + " with ROLE_USER");
+                List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority(role));
+                
+                UsernamePasswordAuthenticationToken authentication = 
+                    new UsernamePasswordAuthenticationToken(email, null, authorities);
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                System.out.println("====== [AUTH SUCCESS]: " + email + " with ROLE_USER");
+            }
+        } catch (ExpiredJwtException e) { //토큰 만료 시 401 Unauthorized 응답
+            log.warn("WARN: JWT Token has expired - " + e.getMessage());
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Token has expired\"}");
+            return; // 더 이상 필터 체인 진행 X
+        } catch (Exception e) {
+            log.error("ERROR: JWT Authentication failed - " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);
